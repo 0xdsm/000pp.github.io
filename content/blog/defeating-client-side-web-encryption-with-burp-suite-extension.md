@@ -243,7 +243,7 @@ Now when actually testing, I went back to that same route that returned a giant 
 This type of protection may seem sufficient, but it's actually rework, since in MiTM scenarios TLS would already do its job of transporting encrypted data, so adding an extra layer of this is redundant, even more so because the implementation is natively insecure due to the needs between client and server.
 
 ## Conclusion
-From this process, it's important to keep in mind that masking the data that the victim's own browser sends and receives transmits a false sense of security, which can be seen as an interesting measure depending on the purpose of that application, but this doesn't protect it from all attacks or make it unexploitable by invaders, it just takes time and understanding about the system.
+From this process, it's important to keep in mind that masking the data that the victim's own browser sends and receives transmits a false sense of security, which can be seen as an interesting measure depending on the purpose of that application, but this doesn't protect it from all attacks or make it inaccessible by attackers, it just takes time and understanding about the system.
 
 In my honest opinion, this is a pure business decision and not very strategic, because it will end up taking more time to implement and later can generate maintenance problems. So what's more important to be done here? Implement robust access controls like the principle of least privilege (RBAC and such), don't store sensitive information in source code or Local Storage, don't trust user input data and all those other issues that can be seen as more important.
 
