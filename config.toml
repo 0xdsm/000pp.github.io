@@ -84,9 +84,9 @@ font_awesome = "https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.3.0/css/al
 [extra.social]
 # Uncomment and add your social media handles
 # email = "your@email.com"
-github = "000pp"
+github = "0xdsm"
 linkedin = "dansdm"
-# twitter = "yourhandle"
+twitter = "0xdsm"
 
 # Image settings
 [extra.images]
