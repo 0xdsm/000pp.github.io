@@ -32,17 +32,19 @@ Para que as funções citadas acima possam descrever o formato do Security Descr
 **Regra**: Qualquer usuário poderá executar esse objeto se ele seguir as seguintes condições:
 1. O título dele ser PM
 2. A divisão ou setor dele for Financeiro ou Vendas
-````
+
+```sh
 d:(XA; ;FX;;;S-1-1-0; (@User.Title=="PM" && (@User.Division=="Financeiro" || @User.Division =="Vendas")))
-````
+```
 
 **Regra 2**: Permite leitura do objeto se o usuário seguir as seguintes condições:
 1. Seu login ter sido feito a partir de um Smart Card
 2. É pertencente do grupo Backup Operator
 3. Está conectado em uma máquina com o BitLocker ativo
-````
+
+```sh
 D:(XA; ;FR;;;S-1-1-0; (Member_of {SID(Smartcard_SID), SID(BO)} &&@Device.Bitlocker))
-````
+```
 
 ## Qual a sua importância?
 Através do Security Descriptor, pode-se compreender qual o escopo de privilégios que aquele ativo terá sobre um item de seu interesse ou que haverá uma possível interação. Com isso em mente, a Microsoft desenvolveu esse atributo expressivo para que fosse alocado sobre os objetos do ambiente Active Directory e pudesse trabalhar as questões de controle de acesso. Atualmente, ele é utilizado por outras classes do ambiente Active Directory como:
@@ -91,15 +93,13 @@ Após um tratamento sobre os hexadecimais retornados e quais são suas represent
 Assim, podemos compreender a relevância do ntSecurityDescriptor no Active Directory e como podemos utilizar dele para encontrar meios para realizar uma escalação de privilégios por meio de objetos presentes no ambiente.  Como citado anteriormente, a ferramenta BloodHound faz um ótimo trabalhando usufruindo desse atributo para construir caminhos e gráficos com base nas informações coletadas do ambiente. Entende-se que tudo isso é principalmente útil para atacantes, todavia, esse tipo de processo também é de grande utilidade também para os times de operações defensivas, visto que poderão encontrar fragilidades na arquitetura monitorada.
 
 ## Referências
-- https://learn.microsoft.com/en-us/windows/win32/adschema/a-ntsecuritydescriptor
-- https://learn.microsoft.com/en-us/windows/win32/adschema/c-samdomainbase
-- https://learn.microsoft.com/en-us/windows/win32/adschema/c-top
-- https://learn.microsoft.com/en-us/windows/win32/secauthz/security-descriptor-string-format?redirectedfrom=MSDN
-- https://learn.microsoft.com/en-us/windows/win32/secgloss/a-gly
-- https://learn.microsoft.com/en-us/windows/win32/secgloss/d-gly
-- https://learn.microsoft.com/en-us/windows/win32/secauthz/access-control-lists
-- https://learn.microsoft.com/en-us/openspecs/windows_protocols/ms-dtyp/4f4251cc-23b6-44b6-93ba-69688422cb06
-- https://learn.microsoft.com/en-us/openspecs/windows_protocols/ms-dtyp/7d4dac05-9cef-4563-a058-f108abecce1d
-- https://github.com/fortra/impacket/blob/f8899e65f16c50b871863528d419cfb701a5a3e3/impacket/ldap/ldaptypes.py
-- https://learn.microsoft.com/en-us/windows/win32/api/iads/ne-iads-ads_rights_enum
-- https://www.installsetupconfig.com/win32programming/accesscontrollistacl2_1.html
+- [https://github.com/fortra/impacket/blob/f8899e65f16c50b871863528d419cfb701a5a3e3/impacket/ldap/ldaptypes.py](https://github.com/fortra/impacket/blob/f8899e65f16c50b871863528d419cfb701a5a3e3/impacket/ldap/ldaptypes.py)
+- [https://learn.microsoft.com/en-us/windows/win32/adschema/](https://learn.microsoft.com/en-us/windows/win32/adschema/)
+- [https://www.installsetupconfig.com/win32programming/accesscontrollistacl2_1.html](https://www.installsetupconfig.com/win32programming/accesscontrollistacl2_1.html)
+- [https://learn.microsoft.com/en-us/windows/win32/secauthz/access-control-lists](https://learn.microsoft.com/en-us/windows/win32/secauthz/access-control-lists)
+- [https://learn.microsoft.com/en-us/windows/win32/secauthz/security-descriptor-string-format](https://learn.microsoft.com/en-us/windows/win32/secauthz/security-descriptor-string-format)
+- [https://learn.microsoft.com/en-us/windows/win32/secgloss/a-gly](https://learn.microsoft.com/en-us/windows/win32/secgloss/a-gly)
+- [https://learn.microsoft.com/en-us/windows/win32/secgloss/d-gly](https://learn.microsoft.com/en-us/windows/win32/secgloss/d-gly)
+- [https://learn.microsoft.com/en-us/openspecs/windows_protocols/ms-dtyp/4f4251cc-23b6-44b6-93ba-69688422cb06](https://learn.microsoft.com/en-us/openspecs/windows_protocols/ms-dtyp/4f4251cc-23b6-44b6-93ba-69688422cb06)
+- [https://learn.microsoft.com/en-us/openspecs/windows_protocols/ms-dtyp/7d4dac05-9cef-4563-a058-f108abecce1d](https://learn.microsoft.com/en-us/openspecs/windows_protocols/ms-dtyp/7d4dac05-9cef-4563-a058-f108abecce1d)
+- [https://learn.microsoft.com/en-us/windows/win32/api/iads/ne-iads-ads_rights_enum](https://learn.microsoft.com/en-us/windows/win32/api/iads/ne-iads-ads_rights_enum)

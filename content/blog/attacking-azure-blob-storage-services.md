@@ -55,7 +55,7 @@ As we can see in the image above, the service is asking for the parameter "comp"
 
 The main problem here is Azure Blob Storage does not indicate if the container name is valid or not, i.e. **static** can be a valid container name and **notnotnotvalid** invalid but we will get the same response for both:
 
-```
+```sh
 <Error>
 <Code>ResourceNotFound</Code>
 <Message>
@@ -70,7 +70,8 @@ But Microsoft is not an evil company, and there is a way to identify if the cont
 ![image](/assets/attacking-azure-blob-storage/listing.png)
 
 With this in mind, we can go back to FFUF and enumerate valid container names through this command:
-```
+
+```sh
 ffuf -c -w /opt/SecLists/Discovery/Web-Content/common.txt --fc 404 --mc all -u https://000pp.blob.core.windows.net/FUZZ?comp=list
 ffuf -c -w /opt/SecLists/Discovery/Web-Content/common.txt --fc 404 --mc all -u https://000pp.blob.core.windows.net/FUZZ?restype=container&comp=list
 ```
@@ -94,15 +95,15 @@ Blobber automates the process of adding `?restype=container&comp=list` to the UR
 
 ![image](/assets/attacking-azure-blob-storage/blobber2.png)
 
-I will not release Blobber for now because I want to do more tests and not release a tool that does not work as expected. However, it will eventually be available on my GitHub. The repo will be accessible through this URL [https://github.com/000pp/blobber](https://github.com/000pp/blobber).
+Blobber is available on my GitHub if you have interest in using the tool.
 
 ## Conclusion
 Today we learned a bit more about the Azure Blob Storage service and how valuable it is to find one with anonymous access enabled. I really enjoyed reading about this through Microsoft's documentation and developing this script (Blobber). In my opinion, this is the best way to learn something new and improve your skills. I hope all you guys liked this post and learned something new. I hope to see you again soon.
 
 ## References
-- https://learn.microsoft.com/en-us/azure/storage/blobs/
-- https://learn.microsoft.com/en-us/azure/storage/blobs/storage-blobs-overview
-- https://learn.microsoft.com/en-us/rest/api/storageservices/blob-service-rest-api
-- https://learn.microsoft.com/en-us/rest/api/storageservices/blob-service-concepts
-- https://learn.microsoft.com/en-us/rest/api/storageservices/enumerating-blob-resources
-- https://learn.microsoft.com/en-us/rest/api/storageservices/operations-on-containers
+- [https://learn.microsoft.com/en-us/azure/storage/blobs/](https://learn.microsoft.com/en-us/azure/storage/blobs/)
+- [https://learn.microsoft.com/en-us/azure/storage/blobs/storage-blobs-overview](https://learn.microsoft.com/en-us/azure/storage/blobs/storage-blobs-overview)
+- [https://learn.microsoft.com/en-us/rest/api/storageservices/blob-service-rest-api](https://learn.microsoft.com/en-us/rest/api/storageservices/blob-service-rest-api)
+- [https://learn.microsoft.com/en-us/rest/api/storageservices/blob-service-concepts](https://learn.microsoft.com/en-us/rest/api/storageservices/blob-service-concepts)
+- [https://learn.microsoft.com/en-us/rest/api/storageservices/enumerating-blob-resources](https://learn.microsoft.com/en-us/rest/api/storageservices/enumerating-blob-resources)
+- [https://learn.microsoft.com/en-us/rest/api/storageservices/operations-on-containers](https://learn.microsoft.com/en-us/rest/api/storageservices/operations-on-containers)
