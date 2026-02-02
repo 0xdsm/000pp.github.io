@@ -1,0 +1,528 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>WebView Analyzer</title>
+    <style>
+        :root {
+            --bg-color: #efefef;
+            --card-bg: #ffffff;
+            --text-color: #1c1c1c;
+            --accent-color: #797979;
+            --border-color: #414141;
+            --code-bg: #cfcfcf;
+            --success-color: #4caf50;
+            --danger-color: #f44336;
+        }
+        body {
+            font-family: 'Arial', Courier, monospace;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 10px;
+            font-size: 12px;
+        }
+        h2, h3 { margin: 10px 0; color: var(--accent-color); border-bottom: 1px solid var(--border-color); padding-bottom: 5px; }
+        
+        /* Controls */
+        .controls {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+            flex-wrap: wrap;
+            background: var(--card-bg);
+            padding: 10px;
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+        }
+        button {
+            background-color: var(--accent-color);
+            color: #000;
+            border: none;
+            padding: 8px 12px;
+            border-radius: 3px;
+            font-weight: bold;
+            cursor: pointer;
+            flex-grow: 1;
+        }
+        button:active { background-color: #00acc1; }
+        button.secondary { background-color: #444; color: #fff; }
+        
+        /* Layout */
+        details {
+            background-color: var(--card-bg);
+            margin-bottom: 8px;
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            overflow: hidden;
+        }
+        details[open] { border-color: var(--accent-color); }
+        summary {
+            padding: 10px;
+            cursor: pointer;
+            background-color: #d3d3d3;
+            list-style: none; /* Hide default arrow */
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-weight: bold;
+        }
+        summary::after { content: '+'; font-size: 16px; }
+        details[open] summary::after { content: '-'; }
+        
+        /* Data Display */
+        .data-content { padding: 10px; }
+        pre {
+            background-color: var(--code-bg);
+            border: 1px solid var(--border-color);
+            padding: 8px;
+            overflow-x: auto;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            margin: 0;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+        .highlight { color: var(--accent-color); }
+        .warn { color: #ff9800; }
+        .error { color: var(--danger-color); }
+        .log-entry { border-bottom: 1px solid #222; padding: 2px 0; display: flex; }
+        .log-time { color: #666; margin-right: 8px; min-width: 60px; }
+
+        /* Inputs */
+        textarea, input[type="text"] {
+            width: 100%;
+            background-color: var(--code-bg);
+            color: var(--text-color);
+            border: 1px solid var(--border-color);
+            padding: 8px;
+            box-sizing: border-box;
+            font-family: inherit;
+            margin-top: 5px;
+        }
+        
+        /* Labels */
+        label { display: flex; align-items: center; gap: 5px; user-select: none; }
+    </style>
+</head>
+<body>
+
+    <h2>WebView Analyzer</h2>
+
+    <div class="controls">
+        <button onclick="analyzer.downloadReport()">Download JSON</button>
+        <button onclick="analyzer.copyAllData()">Copy All</button>
+        <button class="secondary" id="btn-debug" onclick="analyzer.triggerDebugger()">Trigger Debugger</button>
+        <div style="flex-grow: 2; display: flex; justify-content: space-around; align-items: center;">
+            <label><input type="checkbox" id="chk-auto-update" checked> Auto-Update</label>
+            <label><input type="checkbox" id="chk-prevent-nav"> Prevent Navigation</label>
+        </div>
+    </div>
+
+    <!-- Environment Section -->
+    <details open>
+        <summary>Environment & Detection</summary>
+        <div class="data-content">
+            <h3>URL</h3>
+            <pre id="out-url"></pre>
+            <h3>User Agent</h3>
+            <pre id="out-ua"></pre>
+            <h3>Mobile Bridge Detection</h3>
+            <pre id="out-bridges">Checking...</pre>
+            <h3>Custom JavaScript APIs (Non-Standard)</h3>
+            <pre id="out-apis">Scanning...</pre>
+        </div>
+    </details>
+
+    <!-- Storage Section -->
+    <details>
+        <summary>Storage (Cookies / Local / Session)</summary>
+        <div class="data-content">
+            <div style="margin-bottom: 10px;">
+                <span style="cursor: pointer; text-decoration: underline; color: var(--accent-color);" onclick="analyzer.copyToClipboard('out-cookies')">Copy Cookies</span>
+                <h3>Cookies</h3>
+                <pre id="out-cookies"></pre>
+            </div>
+            <div style="margin-bottom: 10px;">
+                <span style="cursor: pointer; text-decoration: underline; color: var(--accent-color);" onclick="analyzer.copyToClipboard('out-local-storage')">Copy Local Storage</span>
+                <h3>Local Storage</h3>
+                <pre id="out-local-storage"></pre>
+            </div>
+            <div style="margin-bottom: 10px;">
+                <span style="cursor: pointer; text-decoration: underline; color: var(--accent-color);" onclick="analyzer.copyToClipboard('out-session-storage')">Copy Session Storage</span>
+                <h3>Session Storage</h3>
+                <pre id="out-session-storage"></pre>
+            </div>
+        </div>
+    </details>
+
+    <!-- Network Section -->
+    <details>
+        <summary>Network Interception (Fetch / XHR)</summary>
+        <div class="data-content">
+            <div style="display: flex; justify-content: space-between;">
+                <h3>Network Log</h3>
+                <button class="secondary" style="padding:2px 8px; font-size:10px; flex-grow: 0; width: auto;" onclick="analyzer.clearNetworkLog()">Clear</button>
+            </div>
+            <pre id="out-network"></pre>
+        </div>
+    </details>
+
+    <!-- DOM & Hooks Section -->
+    <details>
+        <summary>DOM Analysis & Hooks</summary>
+        <div class="data-content">
+            <h3>Message Events (PostMessage)</h3>
+            <pre id="out-messages"></pre>
+            <h3>DOM Changes</h3>
+            <pre id="out-dom-changes"></pre>
+        </div>
+    </details>
+
+    <!-- Console Section -->
+    <details open>
+        <summary>Console Mirror</summary>
+        <div class="data-content">
+            <div style="display: flex; justify-content: space-between;">
+                <h3>Console Logs</h3>
+                <button class="secondary" style="padding:2px 8px; font-size:10px; flex-grow: 0; width: auto;" onclick="analyzer.clearConsole()">Clear</button>
+            </div>
+            <div id="console-output" style="background: var(--code-bg); border: 1px solid var(--border-color); padding: 10px; max-height: 300px; overflow-y: auto; font-size: 11px;"></div>
+        </div>
+    </details>
+
+    <!-- JS Execution -->
+    <details>
+        <summary>Execute JavaScript</summary>
+        <div class="data-content">
+            <textarea id="exec-input" rows="4" placeholder="document.body.style.backgroundColor = 'red';"></textarea>
+            <br>
+            <button onclick="analyzer.executeJS()">Run Code</button>
+            <pre id="exec-result" style="margin-top: 10px; min-height: 20px;"></pre>
+        </div>
+    </details>
+
+    <footer>
+        <script>
+            /**
+             * Standard Browser APIs to ignore during "Custom API" detection
+             * Curated list to reduce false positives
+             */
+            const STANDARD_BOM_APIS = new Set([
+                'window', 'self', 'document', 'navigator', 'location', 'history', 
+                'localStorage', 'sessionStorage', 'console', 'performance', 'screen',
+                'fetch', 'XMLHttpRequest', 'WebSocket', 'Worker', 'EventSource',
+                'setTimeout', 'setInterval', 'requestAnimationFrame', 
+                'JSON', 'Math', 'Date', 'Object', 'Array', 'String', 'Number',
+                'Boolean', 'RegExp', 'Error', 'Promise', 'Proxy', 'Map', 'Set',
+                'Symbol', 'Reflect', 'Atomics', 'Intl', 'WebAssembly', 
+                'alert', 'confirm', 'prompt', 'decodeURI', 'encodeURI',
+                'btoa', 'atob', 'eval', 'isFinite', 'isNaN', 'parseFloat', 'parseInt',
+                'URL', 'URLSearchParams', 'Blob', 'File', 'FormData',
+                'CSS', 'IntersectionObserver', 'MutationObserver', 'ResizeObserver',
+                // Chrome specific
+                'chrome', 'webkitRequestFileSystem', 'webkitResolveLocalFileSystemURL',
+                'webkitStorageInfo', 'webkitIndexedDB',
+                // Common Libraries
+                '$', 'jQuery', 'React', 'ReactDOM', 'angular', 'Vue', 'Ember',
+                'Backbone', 'Knockout', 'MooTools', 'Prototype', 'Dojo', 'Ext', 'Sentry', '_hmt'
+            ]);
+
+            class WebViewAnalyzer {
+                constructor() {
+                    this.networkLogs = [];
+                    this.domLogs = [];
+                    this.consoleLogs = [];
+                    this.bridges = [];
+                    this.customApis = [];
+                    this.autoUpdate = true;
+                    this.initUI();
+                    this.installHooks();
+                    this.startAnalysis();
+                }
+
+                initUI() {
+                    document.getElementById('chk-auto-update').addEventListener('change', (e) => {
+                        this.autoUpdate = e.target.checked;
+                    });
+                    
+                    document.getElementById('chk-prevent-nav').addEventListener('change', (e) => {
+                        this.preventNavigation = e.target.checked;
+                    });
+                }
+
+                installHooks() {
+                    // 1. Console Hook
+                    const originalConsole = { ...console };
+                    ['log', 'warn', 'error', 'info', 'debug'].forEach(level => {
+                        console[level] = (...args) => {
+                            this.logToUI(level, args);
+                            originalConsole[level].apply(console, args);
+                        };
+                    });
+
+                    // 2. PostMessage Hook
+                    const originalPostMessage = window.postMessage;
+                    window.postMessage = (message, targetOrigin, transfer) => {
+                        this.logMessage('Out', message, targetOrigin);
+                        return originalPostMessage.call(window, message, targetOrigin, transfer);
+                    };
+                    window.addEventListener('message', (e) => {
+                        this.logMessage('In', e.data, e.origin);
+                    });
+
+                    // 3. Fetch Hook
+                    if (window.fetch) {
+                        const originalFetch = window.fetch;
+                        window.fetch = (...args) => {
+                            const [url, options] = args;
+                            this.logNetwork('Fetch', url, options);
+                            return originalFetch.apply(window, args)
+                                .then(response => {
+                                    this.logNetwork('Fetch Response', url, `Status: ${response.status}`);
+                                    return response;
+                                })
+                                .catch(error => {
+                                    this.logNetwork('Fetch Error', url, error);
+                                    throw error;
+                                });
+                        };
+                    }
+
+                    // 4. XHR Hook
+                    const originalOpen = XMLHttpRequest.prototype.open;
+                    const originalSend = XMLHttpRequest.prototype.send;
+                    
+                    XMLHttpRequest.prototype.open = function(method, url) {
+                        this._method = method;
+                        this._url = url;
+                        return originalOpen.apply(this, arguments);
+                    };
+
+                    XMLHttpRequest.prototype.send = function() {
+                        this.addEventListener('load', () => {
+                            analyzer.logNetwork('XHR', this._url, `Status: ${this.status}`);
+                        });
+                        this.addEventListener('error', () => {
+                            analyzer.logNetwork('XHR Error', this._url, 'Failed');
+                        });
+                        return originalSend.apply(this, arguments);
+                    };
+
+                    // 5. Navigation Hook (Prevent Nav)
+                    window.addEventListener('beforeunload', (e) => {
+                        if (this.preventNavigation) {
+                            e.preventDefault();
+                            e.returnValue = '';
+                            this.logToUI('warn', ['Navigation prevented by user.']);
+                            return '';
+                        }
+                    });
+                }
+
+                logMessage(direction, data, origin) {
+                    const log = `[${direction}] Origin: ${origin} | Data: ${JSON.stringify(data).substring(0, 100)}`;
+                    this.domLogs.push(log);
+                    this.updateUI('out-messages', log);
+                }
+
+                logNetwork(type, url, detail) {
+                    const log = `[${type}] ${url}\n    -> ${detail}`;
+                    this.networkLogs.push(log);
+                    this.updateUI('out-network', log);
+                }
+
+                logToUI(level, args) {
+                    const timestamp = new Date().toLocaleTimeString();
+                    const message = Array.from(args).map(arg => {
+                        try {
+                            return typeof arg === 'object' ? JSON.stringify(arg) : String(arg);
+                        } catch (e) {
+                            return arg;
+                        }
+                    }).join(' ');
+                    
+                    this.consoleLogs.push({ time: timestamp, level, message });
+                    
+                    const consoleDiv = document.getElementById('console-output');
+                    const entry = document.createElement('div');
+                    entry.className = 'log-entry';
+                    
+                    let levelClass = '';
+                    if (level === 'error') levelClass = 'error';
+                    else if (level === 'warn') levelClass = 'warn';
+
+                    entry.innerHTML = `<span class="log-time">[${timestamp}]</span> <span class="${levelClass}">[${level.toUpperCase()}]</span> ${message.replace(/</g, '&lt;')}`;
+                    consoleDiv.appendChild(entry);
+                    consoleDiv.scrollTop = consoleDiv.scrollHeight; // Auto scroll
+                }
+
+                updateUI(elementId, newText) {
+                    const el = document.getElementById(elementId);
+                    if (!el) return;
+                    // Append mode or overwrite based on ID type logic
+                    if (elementId === 'out-network' || elementId === 'out-messages') {
+                         el.innerText += newText + '\n';
+                    } else {
+                         el.innerText = newText;
+                    }
+                }
+                
+                clearNetworkLog() {
+                    this.networkLogs = [];
+                    document.getElementById('out-network').innerText = '';
+                }
+
+                clearConsole() {
+                    this.consoleLogs = [];
+                    document.getElementById('console-output').innerHTML = '';
+                }
+
+                startAnalysis() {
+                    setInterval(() => {
+                        if (!this.autoUpdate) return;
+                        this.detectEnvironment();
+                        this.scanStorage();
+                    }, 2000);
+
+                    // Initial run
+                    this.detectEnvironment();
+                    this.scanStorage();
+                    this.scanDOM();
+                }
+
+                detectEnvironment() {
+                    document.getElementById('out-url').innerText = window.location.href;
+                    document.getElementById('out-ua').innerText = navigator.userAgent;
+
+                    // Bridge Detection
+                    const bridges = [];
+                    if (window.Android) bridges.push('Android (window.Android)');
+                    if (window.webkit && window.webkit.messageHandlers) bridges.push('iOS WebKit (window.webkit.messageHandlers)');
+                    if (window.ReactNativeWebView) bridges.push('React Native (window.ReactNativeWebView)');
+                    if (window.flutter_inappwebview) bridges.push('Flutter (window.flutter_inappwebview)');
+                    if (window.WVJBCallbacks) bridges.push('iOS WebViewJavascriptBridge');
+                    
+                    this.bridges = bridges;
+                    document.getElementById('out-bridges').innerText = bridges.length > 0 ? bridges.join('\n') : 'No standard mobile bridges detected.';
+
+                    // Custom API Scan
+                    const customApis = [];
+                    for (let key in window) {
+                        if (!STANDARD_BOM_APIS.has(key) && key !== 'WebViewAnalyzer') {
+                            try {
+                                const val = window[key];
+                                const type = typeof val;
+                                // Heuristic: suspicious if it's an object or function not in standard list
+                                if (type === 'object' || type === 'function') {
+                                     customApis.push(`${key} (${type})`);
+                                }
+                            } catch (e) {
+                                // Access denied
+                            }
+                        }
+                    }
+                    // Update only if changed to reduce flicker (simplified for this demo)
+                    if (customApis.length !== this.customApis.length) {
+                        this.customApis = customApis;
+                        document.getElementById('out-apis').innerText = customApis.length > 0 ? customApis.join('\n') : 'None detected.';
+                    }
+                }
+
+                scanStorage() {
+                    try {
+                        document.getElementById('out-cookies').innerText = document.cookie || 'No cookies.';
+                        document.getElementById('out-local-storage').innerText = JSON.stringify(localStorage, null, 2);
+                        document.getElementById('out-session-storage').innerText = JSON.stringify(sessionStorage, null, 2);
+                    } catch (e) {
+                        console.error("Storage scan failed", e);
+                    }
+                }
+
+                scanDOM() {
+                    // Check for hidden inputs or specific tokens
+                    const inputs = document.querySelectorAll('input[type="hidden"]');
+                    let hiddenData = "";
+                    inputs.forEach(input => {
+                        if (input.name && input.value) {
+                            hiddenData += `${input.name}=${input.value}\n`;
+                        }
+                    });
+                    if (hiddenData) {
+                        document.getElementById('out-dom-changes').innerText += `[Hidden Inputs Found]\n${hiddenData}\n`;
+                    }
+                }
+
+                executeJS() {
+                    const code = document.getElementById('exec-input').value;
+                    const resultEl = document.getElementById('exec-result');
+                    try {
+                        const result = eval(code); // Using eval intentionally for pentesting tool
+                        resultEl.innerText = String(result);
+                        this.logToUI('info', ['Executed:', code]);
+                    } catch (e) {
+                        resultEl.innerText = `Error: ${e.message}`;
+                        this.logToUI('error', [e]);
+                    }
+                }
+
+                copyToClipboard(elementId) {
+                    const text = document.getElementById(elementId).innerText;
+                    navigator.clipboard.writeText(text).then(() => {
+                        alert('Copied to clipboard!');
+                    }).catch(err => {
+                        console.error('Copy failed', err);
+                    });
+                }
+
+                copyAllData() {
+                    const data = this.getFullData();
+                    const text = JSON.stringify(data, null, 2);
+                    navigator.clipboard.writeText(text).then(() => alert('All data copied!'));
+                }
+
+                downloadReport() {
+                    const data = this.getFullData();
+                    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `webview_analysis_${Date.now()}.json`;
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                }
+
+                getFullData() {
+                    return {
+                        url: window.location.href,
+                        userAgent: navigator.userAgent,
+                        bridges: this.bridges,
+                        customApis: this.customApis,
+                        cookies: document.cookie,
+                        localStorage: { ...localStorage },
+                        sessionStorage: { ...sessionStorage },
+                        networkLogs: this.networkLogs,
+                        consoleLogs: this.consoleLogs,
+                        timestamp: new Date().toISOString()
+                    };
+                }
+
+                triggerDebugger() {
+                    debugger; // Triggers breakpoint if devtools are open
+                }
+            }
+
+            // Initialize
+            const analyzer = new WebViewAnalyzer();
+
+            // Handle errors globally
+            window.onerror = function(message, source, lineno, colno, error) {
+                analyzer.logToUI('error', [`Global Error: ${message} at ${source}:${lineno}`]);
+            };
+        </script>
+    </footer>
+</body>
+</html>
+
