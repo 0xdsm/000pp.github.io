@@ -1,4 +1,4 @@
-name: Deploy Zola site to Pages
+name: Deploy to Pages
 
 on:
   push:
@@ -20,21 +20,19 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
         with:
-          submodules: true
-          fetch-depth: 0
-      - name: Setup Pages
-        uses: actions/configure-pages@v4
-      - name: Setup Zola
-        uses: taiki-e/install-action@v2
-        with:
-          tool: zola@0.18.0
-      - name: Build with Zola
-        run: zola build
+          node-version: 20
+
+      - name: Generate index
+        run: node build.mjs
+
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: ./public
+          path: .
 
   deploy:
     environment:

@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" href="/style.css">
+  <script type="application/json" id="meta">
+  {
+    "title": "Discovering an Authenticated RCE Vulnerability in My Old Router",
+    "date": "2025-01-10",
+    "description": "",
+    "tags": ["research", "web", "reverse engineering", "exploit"]
+  }
+  </script>
+</head>
+<body>
+  <div class="wrapper">
+    <site-header></site-header>
+    <main>
+      <site-article-header></site-article-header>
+      <div class="article-content">
+
+        <p>Everything started when I watched a talk by <a href="https://www.youtube.com/watch?v=4_UI9zBLJp0">Maycon Vitali at H2HC titled "Internet of Sh!t - Maycon Vitali - H2HC University 2018"</a>, where he discussed his process of discovering vulnerabilities in a Ubiquiti router. After watching the 30-minute talk, I stopped the video, looked around, and remembered an old router that I had in my house. I immediately searched for the power cable, plugged it in next to my desk, and checked if everything worked fine. After about 5 minutes, I scanned my network and found the router's IP address. I made some changes and set the IP to <code>192.168.15.1</code>.</p>
+
+        <p>With everything set up, I ran <code>nmap -p- -open -vvvvv --min-rate=5000 -T3 -Pn</code> to check the available ports and running services.</p>
+
+        <ul>
+          <li><code>-p-</code>: Scan all 65,535 TCP ports;</li>
+          <li><code>-v/-vvvvv</code>: Enable verbose mode;</li>
+          <li><code>--open</code>: Only show open (or possible open) ports;</li>
+          <li><code>--min-rate</code>: Send packets no slower than X per second;</li>
+          <li><code>-Pn</code>: No ping. Skips the host discovery stage altogether.</li>
+        </ul>
+
+        <img src="/static/assets/exploring-an-authenticated-rce-in-my-rounter/image.png" alt="Nmap scan results showing open ports on the router">
+
+        <p>When I saw the SSH port, I looked behind the router for any credentials and, fortunately, it had them. I tried logging in with the "admin" username, but it didn't work, so I searched for some documentation and discovered the correct username was "support."</p>
+
+        <img src="/static/assets/exploring-an-authenticated-rce-in-my-rounter/image%201.png" alt="SSH login with support credentials showing restricted shell">
+
+        <p>As shown in the image above, we couldn't execute commands or interact with the operating system beyond the initial shell. The goal at this moment was to figure out how to execute commands, as I had no prior experience with hardware hacking and didn't want to attempt extracting the firmware without understanding how to do it. After a bit of research, I discovered that you could pass a direct command after the SSH command to escape the "dumb shell".</p>
+
+        <img src="/static/assets/exploring-an-authenticated-rce-in-my-rounter/image%202.png" alt="Escaping the restricted shell by passing commands directly via SSH">
+
+        <p>Using the <code>netstat -lpntu</code> command, I checked all running services ports. The idea here is to find some binary or service we can exploit to discover a vulnerability, but we don't investigate it too deeply and move on to other enumerations.</p>
+        <ul>
+          <li><code>-l</code>: Displays only listening sockets;</li>
+          <li><code>-p</code>: Displays the process ID (PID) and the program name;</li>
+          <li><code>-n</code>: Display addresses and port numbers in their numerical format;</li>
+          <li><code>-t</code>: Display active TCP connections;</li>
+          <li><code>-u</code>: Display active UDP connections.</li>
+        </ul>
+
+        <img src="/static/assets/exploring-an-authenticated-rce-in-my-rounter/image%203.png" alt="netstat output showing router services and open ports">
+
+        <p>Through the <code>uname -a</code> command, I identified the version of the running Linux system. As you can see, it's a fairly up-to-date kernel, and the environment is somewhat limited, so we also chose not to delve too deeply into its exploitation because, above all, our user is already part of the root group.</p>
+
+<pre><code>Linux (none) 4.4.115 #1 SMP Fri Jul 5 16:58:21 CST 2024 armv7l GNU/Linux</code></pre>
+
+        <p>Using the command <code>ps w</code>, I also found a bunch of interesting information. There are several processes using some config files, including some XMLs that contain virtually all the router's configurations, but we also didn't find anything of significant relevance here.</p>
+
+        <img src="/static/assets/exploring-an-authenticated-rce-in-my-rounter/image%204.png" alt="ps w output showing running processes and config file references">
+
+        <p>After testing the router possibilities, I discovered some issues:</p>
+        <ul>
+          <li>Me and my friends tried different methods to get a reverse shell, but without success.</li>
+          <li>Some common binaries, like <code>ls</code>, didn't work.</li>
+          <li>The entire router was running on a read-only system, so we couldn't create a web shell in the web app's directory.</li>
+        </ul>
+
+        <p>Not having <code>ls</code> wasn't a problem because we still had the <code>find</code> binary. So we can use the command <code>file /app -type f</code> to list all the files inside the <code>/app</code> directory. For example:</p>
+
+        <img src="/static/assets/exploring-an-authenticated-rce-in-my-rounter/image%205.png" alt="Using find to list files in the /app directory">
+
+        <p>When I listed the files in the <code>/tmp</code> directory, I found a file called <code>dump.txt</code> that caught my attention. Reading this file, I discovered it stored network passwords in plaintext, along with other network configurations, which is indeed quite useful if you want to access the Wi-Fi network without changing it, which I think is the best option. The contents of the file were something like this:</p>
+
+        <img src="/static/assets/exploring-an-authenticated-rce-in-my-rounter/image%206.png" alt="dump.txt showing Wi-Fi passwords in plaintext">
+        <img src="/static/assets/exploring-an-authenticated-rce-in-my-rounter/image%207.png" alt="dump.txt additional network configuration entries">
+
+        <h2>Escalating from cmdsh</h2>
+
+        <p>Analyzing the processes, I discovered that the initial shell we got when accessing via SSH was called <code>cmdsh</code> and appeared to be a unique binary used to manage the SSH service. I copied the <code>cmdsh</code> binary to my local machine and opened it in Binary Ninja to understand what was happening in the background.</p>
+
+        <img src="/static/assets/exploring-an-authenticated-rce-in-my-rounter/image%208.png" alt="cmdsh binary opened in Binary Ninja for analysis">
+
+        <p>We can see that the binary looks for two variables called <code>LOGNAME</code> and <code>LOGFROM</code>. Digging further into the code, we identified the expected values for these variables:</p>
+        <ul>
+          <li>admin</li>
+          <li>telefonica</li>
+        </ul>
+
+        <img src="/static/assets/exploring-an-authenticated-rce-in-my-rounter/image%209.png" alt="Binary Ninja showing LOGNAME and LOGFROM variable checks in cmdsh">
+
+        <p>The most important part of this code is the lines:</p>
+        <ul>
+          <li><code>current_hidden</code> and <code>current_permission</code></li>
+        </ul>
+
+        <p>Why is this interesting? Because we can see the difference in permissions available when logged in with an <code>admin</code> or <code>telefonica</code> profile. So, before running the command <code>/bin/cmdsh</code>, we specify the values <code>LOGNAME=telefonica</code>, for example, and now some sysadmin commands become available to us =).</p>
+
+        <img src="/static/assets/exploring-an-authenticated-rce-in-my-rounter/image%2010.png" alt="Running cmdsh with LOGNAME=telefonica unlocking additional commands">
+
+        <h2>Attacking the Web App</h2>
+
+        <p>I tried extracting the webapp content with <code>cURL</code>, <code>wget</code>, or <code>SCP</code>, but I didn't have success with. So, I decided to create a tar file, convert it to base64, and save the output locally. After this, I converted it back into a normal file and successfully retrieved the content. I created the tar file from the directory <code>/usr/shared/web</code>.</p>
+
+        <img src="/static/assets/exploring-an-authenticated-rce-in-my-rounter/image%2011.png" alt="Creating tar archive of /usr/shared/web and encoding to base64">
+        <img src="/static/assets/exploring-an-authenticated-rce-in-my-rounter/image%2012.png" alt="Decoding base64 and extracting the webapp tar archive locally">
+
+        <p>In the end, we have a "valid" code that we can open in VSCode to better understand the application's structure, but not everything is as smooth as we imagined. This is an issue I didn't consider at the time I was exporting it to VSCode. All the files are CGIs.</p>
+
+        <img src="/static/assets/exploring-an-authenticated-rce-in-my-rounter/image%2013.png" alt="VSCode showing the extracted webapp files are all CGI binaries">
+
+        <p>Of course, we couldn't read the CGI files directly because they are compiled C files that is used in the web interface and in other functions. I started exploring the available functions in the web app and found a menu called <code>Tools</code>. Accessing it, we saw options to run commands like <code>ping</code>, <code>traceroute</code>, and <code>nslookup</code>.</p>
+
+        <img src="/static/assets/exploring-an-authenticated-rce-in-my-rounter/image%2014.png" alt="Router web app Tools menu showing ping, traceroute, and nslookup options">
+
+        <p>This immediately caught my attention. I tried injecting direct commands into it, but there was a JavaScript validation that checked for valid IPs. However, we could bypass this by capturing a valid request in Burp Suite and modifying the IP parameter. Furthermore, there was some form of protection against command injection. By examining the code, we could understand how these functions worked (<code>ping</code>, <code>traceroute</code>, and <code>nslookup</code>) and look for ways to bypass or understand what was happening in the background.</p>
+
+        <img src="/static/assets/exploring-an-authenticated-rce-in-my-rounter/image%2015.png" alt="CGI code showing how ping command is constructed from user input">
+        <img src="/static/assets/exploring-an-authenticated-rce-in-my-rounter/image%2016.png" alt="CGI code showing input concatenation into shell command">
+
+        <p>Looking at the final lines of the code, where the <code>nslookup</code>, <code>traceroute</code> and <code>ping</code> binaries runs, we noticed that our input was directly concatenated into the execution and the output was saved to the file <code>/tmp/ping_result</code>. This confirmed that there was command injection possibility.</p>
+
+        <img src="/static/assets/exploring-an-authenticated-rce-in-my-rounter/image%2017.png" alt="CGI source showing direct input concatenation and output saved to /tmp/ping_result">
+
+        <p>Returning to the web app, we kept trying to execute commands without immediate success. After a break, we discovered that the <code>&amp;</code> character wasn't blocked. For now, we could encode the <code>&amp;</code> character with URL encoding and attempt to execute commands like this:</p>
+
+<pre><code>127.0.0.1%26%26id</code></pre>
+
+        <img src="/static/assets/exploring-an-authenticated-rce-in-my-rounter/image%2018.png" alt="Burp Suite request with URL-encoded && for command injection">
+
+        <p>We received a blank response because the output is only saved when you render the another web page. After sending the request, we need to read <code>/tmp/ping_result</code> file content because is where our command execution output is.</p>
+
+        <img src="/static/assets/exploring-an-authenticated-rce-in-my-rounter/image%2019.png" alt="Reading /tmp/ping_result to get command output">
+        <img src="/static/assets/exploring-an-authenticated-rce-in-my-rounter/image%2020.png" alt="ping_result file content showing id command output">
+
+        <p>Finally, we achieved command execution. The issue here was that it was a blind command execution, since the output was saved in <code>/tmp/ping_result</code> and we couldn't read this file outside SSH. The web app also didn't render the command output directly.</p>
+
+        <img src="/static/assets/exploring-an-authenticated-rce-in-my-rounter/image%2021.png" alt="Command execution confirmed but output only accessible via SSH">
+
+        <p>If we look at the output of our command now, we'll be surprised by something quite unfortunate, but something we managed to solve later, which was rather "funny" given the ideas we came up with during this process.</p>
+
+        <img src="/static/assets/exploring-an-authenticated-rce-in-my-rounter/image%2022.png" alt="ping_result showing truncated output due to application filtering">
+
+        <h2>Escaping the blind command execution</h2>
+
+        <p>Here's what we discovered:</p>
+        <ul>
+          <li>The function that printed the command output removed some lines from the final result, so we couldn't see the output without reading <code>/tmp/ping_result</code> file.</li>
+          <li>There was a slight delay between command execution and when the output was saved, so we needed to wait about 5 seconds before checking the output.</li>
+        </ul>
+
+        <p>To work around this, we needed to concatenate three commands. Why? By using two <code>nslookup</code> commands, we ensured our command's output wasn't the last line removed by the application.</p>
+
+        <img src="/static/assets/exploring-an-authenticated-rce-in-my-rounter/image%2023.png" alt="Three-command chain to bypass output filtering">
+
+<pre><code>127.0.0.1%26%26uname%20-a%26%26nslookup%20127.0.0.1</code></pre>
+
+        <img src="/static/assets/exploring-an-authenticated-rce-in-my-rounter/image%2024.png" alt="uname -a output visible in ping_result surrounded by nslookup output">
+
+        <p>Now we need to automate the process by developing a functional exploit for this. Looking at the login process, we noticed the parameter <code>loginPassword</code> didn't send the password in plaintext. Instead, it sent an MD5 hash of the password. After logging in, a <code>COOKIE_SESSION_KEY</code> was generated, which indicates that our session is valid and we are authenticated in the environment.</p>
+
+        <img src="/static/assets/exploring-an-authenticated-rce-in-my-rounter/image%2025.png" alt="Login request showing MD5-hashed password parameter">
+        <img src="/static/assets/exploring-an-authenticated-rce-in-my-rounter/image%2026.png" alt="Login response setting COOKIE_SESSION_KEY">
+
+        <p>Logging in again showed that the <code>loginPassword</code> value was different from the first login. Apparently, there is a function in the system that ensures the password hash doesn't repeat, which I believe is meant to prevent brute force attacks and similar methods.</p>
+
+        <img src="/static/assets/exploring-an-authenticated-rce-in-my-rounter/image%2027.png" alt="Second login showing different MD5 hash for the same password">
+
+        <p>Inspecting the <code>login.cgi</code> HTML source code, we found the JavaScript function that generated the MD5 hash, the function in question is called "checkLogin," and it seems to mix the SID value, the original password (in plain text), and finally convert everything to MD5.</p>
+
+        <img src="/static/assets/exploring-an-authenticated-rce-in-my-rounter/image%2028.png" alt="login.cgi source showing checkLogin function mixing SID with password for MD5">
+
+        <p>Refreshing the page showed that the <code>sid</code> value changed each time, this indicates that every time we access the login page, the SID will be changed, something like a dynamic generation, so it's not possible to simply convert our password to MD5 and send it directly to the login form.</p>
+
+        <img src="/static/assets/exploring-an-authenticated-rce-in-my-rounter/image%2029.png" alt="Login page source showing dynamic sid value that changes on each load">
+
+        <p>To work with this, our Python script needed to capture the <code>var sid</code> value, concatenate it with the password, and generate the MD5 hash. Using BeautifulSoup, we captured the <code>var sid</code> value after the <code>=</code> character with the following code:</p>
+
+        <img src="/static/assets/exploring-an-authenticated-rce-in-my-rounter/image%2030.png" alt="Python script using BeautifulSoup to extract the sid value from login page">
+
+        <p>This is already enough for us to generate a valid hash when submitting it to the login form after updating the code.</p>
+
+        <img src="/static/assets/exploring-an-authenticated-rce-in-my-rounter/image%2031.png" alt="Python script generating valid MD5 hash from sid + password">
+
+        <p>Now, with a valid <code>COOKIE_SESSION_KEY</code>, we could perform authenticated actions on the router. The final step was to replicate the process and integrate it into the script. The final result of our script will be an command execution with direct output, which made exploiting the vulnerability ten times better.</p>
+
+        <img src="/static/assets/exploring-an-authenticated-rce-in-my-rounter/image%2033.png" alt="Final exploit script achieving authenticated RCE with direct output">
+
+        <h2>Conclusion</h2>
+
+        <p>During this process, my friends and I realized that the most ridiculous ideas can work, like concatenating three commands and hoping for the best xD. But honestly, it's interesting how watching an H2HC talk sparked this desire in me to explore something I had such easy access to, and in the end, everything worked out. Obviously, all of this was possible thanks to the help of the other members of Inferi, who were exceptional in helping me brainstorm some ideas.</p>
+
+        <p>It's funny that I have no experience with reverse engineering, but a little bit of guesswork and determination seems to solve everything. Of course, if I had some experience, it would have helped a lot, but that's something for the future.</p>
+
+        <p>Thank you for reading this far! I hope you've learned something or at least enjoyed the content. Neither the script nor the vulnerability will be made available since this was just field research. But who knows? Maybe this will turn into a CVE in the future, and we'll change our minds about publishing it.</p>
+
+        <h2>References</h2>
+        <ul>
+          <li><a href="https://www.youtube.com/watch?v=4_UI9zBLJp0">youtube.com — Internet of Sh!t - Maycon Vitali - H2HC University 2018</a></li>
+        </ul>
+
+      </div>
+    </main>
+    <site-footer></site-footer>
+  </div>
+  <script src="/components.js"></script>
+</body>
+</html>
