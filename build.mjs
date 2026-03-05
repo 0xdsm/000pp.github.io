@@ -10,7 +10,7 @@
  * No dependencies required.
  */
 
-import { readdir, readFile, writeFile } from 'fs/promises'
+import { readdir, readFile, writeFile, cp, rm, mkdir } from 'fs/promises'
 import { watch } from 'fs'
 import { join, dirname } from 'path'
 import { fileURLToPath } from 'url'
@@ -135,6 +135,22 @@ ${items}
 `
 }
 
+async function buildPublic() {
+  const PUBLIC = join(ROOT, 'public')
+  await rm(PUBLIC, { recursive: true, force: true })
+  await mkdir(PUBLIC)
+
+  const files = ['index.html', 'style.css', 'components.js', 'about.html', 'CNAME']
+  for (const f of files) {
+    await cp(join(ROOT, f), join(PUBLIC, f))
+  }
+  await cp(join(ROOT, 'blog'), join(PUBLIC, 'blog'), { recursive: true })
+  await cp(join(ROOT, 'static'), join(PUBLIC, 'static'), { recursive: true })
+
+  await writeFile(join(PUBLIC, '.nojekyll'), '')
+  console.log('  → public/ built')
+}
+
 async function build() {
   console.log('Building...')
   const articles = await getArticles()
@@ -143,6 +159,8 @@ async function build() {
   const html = renderIndex(articles)
   await writeFile(join(ROOT, 'index.html'), html, 'utf8')
   console.log('  → index.html written')
+
+  await buildPublic()
 }
 
 async function main() {
