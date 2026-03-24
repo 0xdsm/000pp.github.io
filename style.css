@@ -245,6 +245,8 @@ body {
   width: 100%;
   height: auto;
   display: block;
+  border-radius: 0.5rem;
+  border: 1px solid gray;
 }
 
 .article-content figcaption {
