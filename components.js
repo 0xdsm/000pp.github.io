@@ -28,7 +28,7 @@ class SiteHeader extends HTMLElement {
 
     this.innerHTML = `
       <header class="site-header">
-        <a href="/" class="site-title">hacking4.fun</a>
+        <a href="/" class="site-title">larper.me</a>
         <nav>
           ${nav}
         </nav>
@@ -44,7 +44,7 @@ class SiteArticleHeader extends HTMLElement {
     const meta = getMeta()
 
     if (meta.title) {
-      document.title = meta.title + ' — hacking4.fun'
+      document.title = meta.title + ' — larper.me'
     }
 
     const tags = (meta.tags ?? [])

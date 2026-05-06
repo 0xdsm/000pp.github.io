@@ -114,7 +114,7 @@ function renderIndex(articles) {
   return `<!DOCTYPE html>
 <html lang="en">
 <head>
-${renderHead('hacking4.fun', 'Writing on security and technology.')}
+${renderHead('larper.me', 'Writing on security and technology.')}
 </head>
 <body>
   <div class="wrapper">
