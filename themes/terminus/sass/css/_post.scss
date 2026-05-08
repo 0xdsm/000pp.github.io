@@ -150,6 +150,35 @@ h6 {
     }
 }
 
+article.post.content img {
+    display: block;
+    margin-inline: auto;
+    border: 1px solid #555;
+}
+
+#img-lightbox {
+    display: none;
+    position: fixed;
+    inset: 0;
+    z-index: 9999;
+    background: rgba(0, 0, 0, 0.85);
+    cursor: zoom-out;
+    align-items: center;
+    justify-content: center;
+
+    &.active {
+        display: flex;
+    }
+
+    img {
+        max-width: 90vw;
+        max-height: 90vh;
+        object-fit: contain;
+        border: none;
+        box-shadow: 0 0 40px rgba(0, 0, 0, 0.6);
+    }
+}
+
 // Inline footnotes
 
 .footnote-reference {
