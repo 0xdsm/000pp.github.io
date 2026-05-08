@@ -21,13 +21,13 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup Node
-        uses: actions/setup-node@v4
+      - name: Setup Zola
+        uses: taiki-e/install-action@v2
         with:
-          node-version: 20
+          tool: zola@0.22.1
 
-      - name: Generate index
-        run: node build.mjs
+      - name: Build
+        run: zola build
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3

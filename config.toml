@@ -1,0 +1,41 @@
+base_url = "https://larper.me"
+title = "dsm's blog"
+description = "Writing on security and technology."
+theme = "terminus"
+compile_sass = true
+generate_feeds = true
+author = "dsm"
+
+taxonomies = [
+    { name = "tags", feed = true },
+]
+
+[markdown]
+render_emoji = false
+bottom_footnotes = true
+github_alerts = true
+
+[markdown.highlighting]
+style = "inline"
+theme = "monokai"
+
+[extra]
+color_scheme = "dsm-light"
+color_scheme_switcher = false
+close_responsive_menu_on_resize = true
+feed_icon = false
+layout = "center"
+show_default_author = false
+
+main_menu = [
+    { name = "blog", url = "blog", trailing_slash = true },
+    { name = "tags", url = "tags", trailing_slash = true },
+    { name = "about", url = "about", trailing_slash = true },
+    { name = "github", url = "https://github.com/0xdsm", new_tab = true },
+]
+
+socials = [
+    { name = "github", url = "https://github.com/0xdsm" },
+    { name = "linkedin", url = "https://linkedin.com/in/dansdm" },
+    { name = "x", url = "https://twitter.com/0xdsm" },
+]
