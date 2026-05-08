@@ -5,11 +5,9 @@ date = 2025-02-20
 tags = ["research", "mobile", "reverse engineering", "flutter"]
 +++
 
-Continuing with my mobile pentest studies—and, of course, doing mobile pentests at work—it's pretty common to run into different mobile apps built with various programming languages. For example, you'll find apps developed in Java, Kotlin, Flutter, Xamarin, Swift… and a bunch of others.
+Continuing with my mobile pentest studies and, of course, doing mobile pentests at work, it's pretty common to run into different mobile apps built with various programming languages. For example, you'll find apps developed in Java, Kotlin, Flutter, Xamarin, Swift… and a bunch of others.
 
-So far, I've only worked with Java and Flutter apps, but I'm looking forward to exploring others. What am I getting at here? Basically, what's the difference between decompiling a Java app and a Flutter app? It's not that easy to read the source code.
-
-You'll probably find only a few class files that won't be nearly as helpful as you'd hope. For example, here's the app I'm currently wrestling with:
+You'll probably find only a few class files that won't be nearly as helpful as you'd hope. For example, here's the app I'm currently working with:
 
 ![Decompiled Flutter APK showing only a few class files](/assets/bypassing-flutter-certificate-pinning/image.png)
 
@@ -31,8 +29,7 @@ On the other hand, `libapp.so` is unique to each Flutter application. It contain
 As stated in the Dart documentation, AOT-compiled code guarantees better performance during application execution, such as a fast startup and consistent runtime performance, unlike JIT-compiled code, which is slower at startup but can reach better performance after some time when necessary runtime optimizations occur. Naturally, during a fast development cycle, the Dart VM offers developers JIT compilation features like hot reload, live metrics collection, and debugging support, which help a lot in thoroughly testing the application.
 
 <figure>
-  <img src="https://miro.medium.com/v2/resize:fit:720/format:webp/1*oVVba1QhXL1hUBKE9sfenw.png" alt="Flutter garbage collector diagram">
-  <figcaption><a href="https://medium.com/flutter/flutter-dont-fear-the-garbage-collector-d69b3ff1ca30">flutter.dev — Don't Fear the Garbage Collector</a></figcaption>
+  <img src="/assets/bypassing-flutter-certificate-pinning/flutter.png" alt="Flutter architectural overview">
 </figure>
 
 When apps are finally ready to be deployed to web applications or app stores, you can compile your application with the Dart AOT compiler to native ARM or x64 machine code, which, as discussed earlier, will offer better startup performance for your entire application. The AOT-compiled code will run inside the Dart runtime environment with a memory management system that employs fast garbage collection and a generational garbage collector.
