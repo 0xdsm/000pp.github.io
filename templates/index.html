@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+
+{%- block main -%}
+{%- if section.extra.section_path -%}
+    {%- set blog_section = get_section(path=section.extra.section_path, lang=lang) -%}
+    {%- set num_top_posts = section.extra.max_posts | default(value=blog_section.pages | length) -%}
+    {%- if blog_section.paginate_reversed == true -%}
+        {%- set top_posts = blog_section.pages | reverse | slice(end=num_top_posts) -%}
+    {%- else -%}
+        {%- set top_posts = blog_section.pages | slice(end=num_top_posts) -%}
+    {%- endif -%}
+{%- else -%}
+    {%- set blog_section = section -%}
+    {%- set top_posts = blog_section.pages -%}
+{%- endif -%}
+
+<div class="content_section">
+    <div class="section_header section_header_red">It works!</div>
+    <div class="content_section_text">
+        {%- if section.content %}
+        {{ section.content | safe }}
+        {%- else %}
+        <p>Welcome. This blog covers offensive security, real engagements and personal research. Configuration is minimal, content isn't.</p>
+        {%- endif %}
+    </div>
+
+    <div class="section_header">Latest Posts</div>
+    <div class="content_section_text">
+        {%- for page in top_posts %}
+        <div class="post-list-item">
+            <div class="post-title"><a href="{{ page.permalink | safe }}">{{ page.title }}</a></div>
+            <ul class="post-meta">
+                <li><time datetime="{{ page.date }}">{{ page.date | date(format="%Y-%m-%d") }}</time></li>
+                {%- if page.reading_time %}<li class="sep">::</li><li>{{ page.reading_time }} min read</li>{%- endif %}
+                {%- if page.taxonomies.tags %}<li class="sep">::</li><li>
+                    {%- for tag in page.taxonomies.tags %}#<a href="{{ get_taxonomy_url(kind='tags', name=tag) | safe }}">{{ tag }}</a>{% if not loop.last %} {% endif %}{%- endfor -%}
+                </li>{%- endif %}
+            </ul>
+            {%- if page.description %}
+            <p class="post-desc">{{ page.description | markdown(inline=true) | safe }}</p>
+            {%- endif %}
+        </div>
+        {%- endfor %}
+    </div>
+</div>
+{%- endblock -%}

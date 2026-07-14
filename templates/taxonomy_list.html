@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+
+{%- block title -%}{{ taxonomy.name | title }} | {{ config.title }}{%- endblock -%}
+
+{%- block main -%}
+<div class="content_section">
+    <div class="section_header section_header_red">{{ taxonomy.name | title }}</div>
+    <div class="content_section_text">
+        <ul>
+            {%- for term in terms %}
+            <li><a href="{{ term.permalink | safe }}">{{ term.name }}</a> ({{ term.page_count }})</li>
+            {%- endfor %}
+        </ul>
+    </div>
+</div>
+{%- endblock -%}

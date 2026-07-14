@@ -1,5 +1,5 @@
 base_url = "https://larper.me"
-title = "dsm's blog"
+title = "dsm Default Page"
 description = "Writing on security and technology."
 theme = "terminus"
 compile_sass = true

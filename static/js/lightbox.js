@@ -2,7 +2,7 @@
     const overlay = document.getElementById('img-lightbox');
     const overlayImg = document.getElementById('img-lightbox-img');
 
-    document.querySelectorAll('article.post.content img').forEach(function (img) {
+    document.querySelectorAll('div.content_section_text img').forEach(function (img) {
         img.style.cursor = 'zoom-in';
         img.addEventListener('click', function () {
             overlayImg.src = img.src;

@@ -1,20 +1,12 @@
 {% extends "base.html" %}
 
-{%- block title -%}
-{{ page.title }} | {{ config.title }}
-{%- endblock -%}
+{%- block title -%}{{ page.title }} | {{ config.title }}{%- endblock -%}
 
 {%- block main -%}
-{%- filter indent -%}{%- filter indent -%}
-<article class="post content">
-    <header>
-        <h1 class="post-title">{{ page.title }}</h1>
-    </header>
-{%- endfilter %}{%- endfilter %}
-
-{{ page.content | safe }}
-
-{%- filter indent -%}{%- filter indent %}
-</article>
-{% endfilter %}{% endfilter %}
+<div class="content_section">
+    <div class="section_header section_header_red">{{ page.title }}</div>
+    <div class="content_section_text">
+        {{ page.content | safe }}
+    </div>
+</div>
 {%- endblock -%}

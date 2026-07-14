@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+
+{%- block title -%}{{ section.title }} | {{ config.title }}{%- endblock -%}
+
+{%- block main -%}
+<div class="content_section">
+    <div class="section_header section_header_red">{{ section.title }}</div>
+    {%- if section.content %}
+    <div class="content_section_text">{{ section.content | safe }}</div>
+    {%- endif %}
+
+    <div class="section_header">Posts</div>
+    <div class="content_section_text">
+        {%- for page in paginator.pages | default(value=section.pages) %}
+        <div class="post-list-item">
+            <div class="post-title"><a href="{{ page.permalink | safe }}">{{ page.title }}</a></div>
+            <ul class="post-meta">
+                <li><time datetime="{{ page.date }}">{{ page.date | date(format="%Y-%m-%d") }}</time></li>
+                {%- if page.reading_time %}<li class="sep">::</li><li>{{ page.reading_time }} min read</li>{%- endif %}
+                {%- if page.taxonomies.tags %}<li class="sep">::</li><li>
+                    {%- for tag in page.taxonomies.tags %}#<a href="{{ get_taxonomy_url(kind='tags', name=tag) | safe }}">{{ tag }}</a>{% if not loop.last %} {% endif %}{%- endfor -%}
+                </li>{%- endif %}
+            </ul>
+            {%- if page.description %}
+            <p class="post-desc">{{ page.description | markdown(inline=true) | safe }}</p>
+            {%- endif %}
+        </div>
+        {%- endfor %}
+    </div>
+
+    {%- if paginator and paginator.number_pagers > 1 %}
+    <nav class="pagination">
+        <ul>
+            {%- if paginator.previous %}<li><a href="{{ paginator.previous | safe }}">&lt; newer</a></li>{%- endif %}
+            {%- if paginator.next %}<li><a href="{{ paginator.next | safe }}">older &gt;</a></li>{%- endif %}
+        </ul>
+    </nav>
+    {%- endif %}
+</div>
+{%- endblock -%}

@@ -1,56 +1,75 @@
 {% extends "base.html" %}
 
-{%- block title -%}
-{{ page.title }} | {{ config.title }}
-{%- endblock -%}
+{%- block title -%}{{ page.title }} | {{ config.title }}{%- endblock -%}
 
 {%- block description -%}
     {%- if page.description %}
     <meta name="description" content="{{ page.description | markdown(inline=true) | striptags }}">
     {%- elif page.summary %}
-    <meta name="description" content="{{ page.summary | linebreaksbr | replace(from="<br>", to=" ") | striptags | trim_end_matches(pat=".") | safe }}…">
+    <meta name="description" content="{{ page.summary | linebreaksbr | replace(from='<br>', to=' ') | striptags | trim_end_matches(pat='.') | safe }}…">
     {%- endif %}
 {%- endblock -%}
 
 {%- block main -%}
-{%- filter indent -%}{%- filter indent -%}
-<article class="post content">
-    {{ post_macros::header(page=page, heading="h1") | indent | safe }}
-{%- endfilter %}{%- endfilter %}
-
-{{ page.content | safe }}
-
-{%- filter indent -%}{%- filter indent %}
-</article>
-{%- if page.lower or page.higher %}
-<nav class="post-navigation">
-    <header class="post-navigation-title">
-        <h2>Read More Posts</h2>
-        <hr>
-    </header>
-    <div class="post-navigation-buttons">
-        {%- if page.lower %}
-        <a rel="next" href="{{ page.lower.permalink | safe }}" aria-label="Next article" aria-describedby="next-title">
-            &lt;&nbsp;[<span id="next-title">{{- page.lower.title | truncate(value=100, end="…") -}}</span>]
-        </a>
-        {%- endif %}
-        {%- if page.lower and page.higher %}
-        <span aria-hidden="true" role="separator">::</span>
-        {%- endif %}
-        {%- if page.higher %}
-        <a rel="prev" href="{{ page.higher.permalink | safe }}" aria-label="Prev article" aria-describedby="prev-title">
-            [<span id="prev-title">{{- page.higher.title | truncate(value=100, end="…") -}}</span>]&nbsp;&gt;
-        </a>
+<div class="content_section">
+    <div class="section_header section_header_red">{{ page.title }}</div>
+    <div class="content_section_text">
+        <ul class="post-meta">
+            <li><time datetime="{{ page.date }}">{{ page.date | date(format="%Y-%m-%d") }}</time></li>
+            {%- if page.reading_time %}
+            <li class="sep">::</li>
+            <li>{{ page.reading_time }} min read</li>
+            {%- endif %}
+        </ul>
+        {%- if page.taxonomies.tags %}
+        <div class="post-tags">
+            {%- for tag in page.taxonomies.tags %}
+            #<a href="{{ get_taxonomy_url(kind='tags', name=tag) | safe }}">{{ tag }}</a>
+            {%- endfor %}
+        </div>
         {%- endif %}
     </div>
-</nav>
-{%- endif %}
-{% include "partials/comments.html" -%}
-{% endfilter %}{% endfilter %}
+
+    {%- if page.toc | length > 0 %}
+    <div class="section_header section_header_grey">Table of Contents</div>
+    <div class="content_section_text toc">
+        <ol>
+        {%- for h1 in page.toc %}
+            <li><a href="#{{ h1.id }}">{{ h1.title }}</a>
+                {%- if h1.children %}
+                <ol>
+                {%- for h2 in h1.children %}
+                    <li><a href="#{{ h2.id }}">{{ h2.title }}</a></li>
+                {%- endfor %}
+                </ol>
+                {%- endif %}
+            </li>
+        {%- endfor %}
+        </ol>
+    </div>
+    {%- endif %}
+
+    <div class="content_section_text">
+        {{ page.content | safe }}
+    </div>
+
+    {%- if page.lower or page.higher %}
+    <div class="section_header section_header_grey">Read More</div>
+    <div class="content_section_text">
+        <nav class="post-navigation-buttons">
+            {%- if page.lower %}
+            <a rel="next" href="{{ page.lower.permalink | safe }}">&lt; {{ page.lower.title | truncate(length=60, end="…") }}</a>
+            {%- else %}<span></span>{%- endif %}
+            {%- if page.higher %}
+            <a rel="prev" href="{{ page.higher.permalink | safe }}">{{ page.higher.title | truncate(length=60, end="…") }} &gt;</a>
+            {%- else %}<span></span>{%- endif %}
+        </nav>
+    </div>
+    {%- endif %}
+</div>
 
 <div id="img-lightbox" aria-hidden="true">
     <img id="img-lightbox-img" src="" alt="">
 </div>
-
 <script src="/js/lightbox.js"></script>
 {%- endblock -%}
